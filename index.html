@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PAC OMNICOM</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Press Start 2P', 'Arial Black', monospace;
+            overflow: hidden;
+        }
+        #gameContainer {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        canvas { display: block; }
+        #header {
+            color: #fff;
+            text-align: center;
+            padding: 8px 0;
+            font-size: 11px;
+            display: flex;
+            justify-content: space-between;
+            width: 448px;
+        }
+        #header .profits { color: #FFD700; }
+        #header .high-score { color: #fff; }
+        #footer {
+            color: #fff;
+            text-align: center;
+            padding: 8px 0;
+            font-size: 11px;
+            width: 448px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="header" style="display:none;">
+            <div class="profits">PROFITS: $<span id="score">0</span></div>
+            <div class="high-score">BEST: $<span id="highScore">0</span></div>
+        </div>
+        <canvas id="gameCanvas" width="448" height="496"></canvas>
+        <div id="footer" style="display:none;">
+            <div id="lives"></div>
+            <div id="levelInfo" style="color: #FFD700;"></div>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
