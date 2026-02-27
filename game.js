@@ -662,8 +662,13 @@ class Game {
         this.bonusEaten = false;
         this.bonusX = 0;
         this.bonusY = 0;
-        this.bonusVX = 0;
-        this.bonusVY = 0;
+        this.bonusTileX = 0;
+        this.bonusTileY = 0;
+        this.bonusDir = DIR_RIGHT;
+        this.bonusLastDecX = -1;
+        this.bonusLastDecY = -1;
+        this.bonusScorePopup = 0;
+        this.bonusScorePos = null;
         this.freezeTimer = 0;
         this.ghostEatScore = 0;
         this.ghostEatPos = null;
@@ -739,8 +744,13 @@ class Game {
         this.bonusActive = false;
         this.bonusX = 0;
         this.bonusY = 0;
-        this.bonusVX = 0;
-        this.bonusVY = 0;
+        this.bonusTileX = 0;
+        this.bonusTileY = 0;
+        this.bonusDir = DIR_RIGHT;
+        this.bonusLastDecX = -1;
+        this.bonusLastDecY = -1;
+        this.bonusScorePopup = 0;
+        this.bonusScorePos = null;
 
         // Show header/footer
         document.getElementById('header').style.display = 'flex';
@@ -938,28 +948,65 @@ class Game {
             this.sirenTimer = 0.4;
         }
 
-        // Bonus item - bounces around until eaten
+        // Bonus item - roams the maze until eaten
         if (!this.bonusActive && !this.bonusEaten && this.dotsEaten >= 70) {
             this.bonusActive = true;
+            this.bonusTileX = 14;
+            this.bonusTileY = 17;
             this.bonusX = 14 * TILE + TILE / 2;
             this.bonusY = 17 * TILE + TILE / 2;
-            const angle = Math.random() * Math.PI * 2;
-            this.bonusVX = Math.cos(angle) * 60;
-            this.bonusVY = Math.sin(angle) * 60;
+            this.bonusDir = DIR_RIGHT;
+            this.bonusLastDecX = -1;
+            this.bonusLastDecY = -1;
         }
         if (this.bonusActive) {
+            // Tile-based movement through maze corridors
+            const BONUS_SPEED = 3.0;
+            const bcx = Math.round((this.bonusX - TILE / 2) / TILE);
+            const bcy = Math.round((this.bonusY - TILE / 2) / TILE);
+            const batCenterX = Math.abs(this.bonusX - (bcx * TILE + TILE / 2)) < 1.5;
+            const batCenterY = Math.abs(this.bonusY - (bcy * TILE + TILE / 2)) < 1.5;
+
+            if (batCenterX && batCenterY && (bcx !== this.bonusLastDecX || bcy !== this.bonusLastDecY)) {
+                this.bonusLastDecX = bcx;
+                this.bonusLastDecY = bcy;
+                this.bonusTileX = bcx;
+                this.bonusTileY = bcy;
+                this.bonusX = bcx * TILE + TILE / 2;
+                this.bonusY = bcy * TILE + TILE / 2;
+
+                // Pick a random valid direction (prefer not reversing)
+                const reverse = (this.bonusDir + 2) % 4;
+                const validDirs = [];
+                for (let d = 0; d < 4; d++) {
+                    const v = DIR_VEC[d];
+                    let nx = bcx + v.x;
+                    let ny = bcy + v.y;
+                    if (nx < 0) nx = COLS - 1;
+                    if (nx >= COLS) nx = 0;
+                    if (ny < 0 || ny >= ROWS) continue;
+                    const cell = this.maze[ny][nx];
+                    if (cell === 0 || cell === 4 || cell === 5) continue;
+                    if (d === reverse) continue;
+                    validDirs.push(d);
+                }
+                if (validDirs.length > 0) {
+                    this.bonusDir = validDirs[Math.floor(Math.random() * validDirs.length)];
+                } else {
+                    // Dead end, reverse
+                    this.bonusDir = reverse;
+                }
+            }
+
             // Move
-            this.bonusX += this.bonusVX * dt;
-            this.bonusY += this.bonusVY * dt;
-            // Bounce off canvas edges
-            if (this.bonusX < 12 || this.bonusX > CANVAS_W - 12) {
-                this.bonusVX *= -1;
-                this.bonusX = Math.max(12, Math.min(CANVAS_W - 12, this.bonusX));
-            }
-            if (this.bonusY < 12 || this.bonusY > CANVAS_H - 12) {
-                this.bonusVY *= -1;
-                this.bonusY = Math.max(12, Math.min(CANVAS_H - 12, this.bonusY));
-            }
+            const bv = DIR_VEC[this.bonusDir];
+            this.bonusX += bv.x * BONUS_SPEED * TILE * dt;
+            this.bonusY += bv.y * BONUS_SPEED * TILE * dt;
+
+            // Tunnel wrap
+            if (this.bonusX < -TILE / 2) this.bonusX = CANVAS_W + TILE / 2;
+            if (this.bonusX > CANVAS_W + TILE / 2) this.bonusX = -TILE / 2;
+
             // Check if player eats it (pixel distance)
             const bdist = Math.sqrt(
                 Math.pow(this.player.pixelX - this.bonusX, 2) +
@@ -968,8 +1015,15 @@ class Game {
             if (bdist < TILE) {
                 this.bonusActive = false;
                 this.bonusEaten = true;
-                this.score += 100;
+                this.score += 500;
+                this.bonusScorePopup = 1.5;
+                this.bonusScorePos = { x: this.bonusX, y: this.bonusY };
+                this.updateUI();
             }
+        }
+        // Bonus score popup timer
+        if (this.bonusScorePopup > 0) {
+            this.bonusScorePopup -= dt;
         }
 
         // Ghost collision
@@ -1043,6 +1097,14 @@ class Game {
             ctx.font = 'bold 10px "Press Start 2P", monospace';
             ctx.textAlign = 'center';
             ctx.fillText('$' + this.ghostEatScore, this.ghostEatPos.x, this.ghostEatPos.y - 5);
+        }
+
+        // Bonus score popup
+        if (this.bonusScorePopup > 0 && this.bonusScorePos) {
+            ctx.fillStyle = '#2d8b2d';
+            ctx.font = 'bold 10px "Press Start 2P", monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('$500', this.bonusScorePos.x, this.bonusScorePos.y - 5 - (1.5 - this.bonusScorePopup) * 10);
         }
 
         if (this.state === STATE_READY) {
