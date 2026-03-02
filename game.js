@@ -1137,7 +1137,7 @@ class Game {
             ctx.fillText('GAME OVER', CANVAS_W / 2, CANVAS_H / 2 - 10);
             ctx.fillStyle = '#FFD700';
             ctx.font = '8px "Press Start 2P", monospace';
-            ctx.fillText('THE MARKET WINS', CANVAS_W / 2, CANVAS_H / 2 + 15);
+            ctx.fillText('STOCKHOLDERS NOT SATISFIED', CANVAS_W / 2, CANVAS_H / 2 + 15);
             ctx.fillStyle = '#888';
             ctx.fillText('PRESS ANY KEY', CANVAS_W / 2, CANVAS_H / 2 + 40);
         }
